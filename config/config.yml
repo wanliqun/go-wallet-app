@@ -1,0 +1,22 @@
+database:
+  host: "localhost"
+  port: "5432"
+  user: "your_db_user"
+  password: "your_db_password"
+  name: "wallet_db"
+  sslmode: "disable"
+
+server:
+  port: "8080"
+
+# Define concurrency settings with unique names and precisions
+concurrencies:
+  btc:
+    name: "Bitcoin"
+    precision: 8
+  eth:
+    name: "Ethereum"
+    precision: 18
+  usdt:
+    name: "Tether"
+    precision: 6
