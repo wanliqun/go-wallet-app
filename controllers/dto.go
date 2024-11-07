@@ -14,8 +14,12 @@ func init() {
 		// Register currency validation
 		v.RegisterValidation("currency", func(fl validator.FieldLevel) bool {
 			currency := fl.Field().String()
-			_, ok := config.AppConfig.Concurrencies[currency]
-			return ok
+
+			if config.AppConfig.Concurrencies != nil {
+				_, ok := config.AppConfig.Concurrencies[currency]
+				return ok
+			}
+			return true
 		})
 
 		// Register amount validation
@@ -25,11 +29,12 @@ func init() {
 		})
 
 		// Register currency limit validation
-		v.RegisterValidation("currencyLimit", func(fl validator.FieldLevel) bool {
+		v.RegisterValidation("currency_limit", func(fl validator.FieldLevel) bool {
 			currencies, ok := fl.Field().Interface().([]string)
 			if !ok {
 				return false
 			}
+
 			// Check if the length of currencies is between 1 and 30
 			return len(currencies) >= 1 && len(currencies) <= 30
 		})
@@ -55,15 +60,15 @@ type TransferRequest struct {
 
 // GetBalancesQuery represents the incoming request body for balance retrieval
 type GetBalancesQuery struct {
-	Currencies []string `form:"currency" binding:"required,currencyLimit"` // List of currencies to filter by
+	Currencies []string `form:"currency" binding:"required,currency_limit"` // List of currencies to filter by
 }
 
 // GetTransactionHistoryRequest represents the request for retrieving paginated transaction history with filters
-type GetTransactionHistoryRequest struct {
-	Type   string `json:"type,omitempty" binding:"required,oneof=deposit withdrawal transfer_out transfer_in"` // Filter by transaction type (e.g., "deposit", "withdrawal")
-	Cursor string `json:"cursor,omitempty"`                                                                    // Encoded cursor for keyset pagination
-	Limit  int    `json:"limit,omitempty"`                                                                     // Number of records to fetch
-	Order  string `json:"order,omitempty" binding:"omitempty,oneof=asc desc"`                                  // Sort order (e.g., "asc", "desc")
+type GetTransactionHistoryQuery struct {
+	Type   string `form:"type,omitempty" binding:"omitempty,oneof=deposit withdrawal transfer_out transfer_in"` // Filter by transaction type (e.g., "deposit", "withdrawal")
+	Cursor string `form:"cursor,omitempty"`                                                                     // Encoded cursor for keyset pagination
+	Limit  int    `form:"limit,omitempty"`                                                                      // Number of records to fetch
+	Order  string `form:"order,omitempty" binding:"omitempty,oneof=asc desc"`                                   // Sort order (e.g., "asc", "desc")
 }
 
 // GetTransactionHistoryResponse represents the response for paginated transaction history

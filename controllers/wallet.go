@@ -10,11 +10,11 @@ import (
 )
 
 type WalletController struct {
-	WalletService *services.WalletService
-	UserService   *services.UserService
+	WalletService services.IWalletService
+	UserService   services.IUserService
 }
 
-func NewWalletController(wallet *services.WalletService, user *services.UserService) *WalletController {
+func NewWalletController(wallet services.IWalletService, user services.IUserService) *WalletController {
 	return &WalletController{WalletService: wallet, UserService: user}
 }
 
@@ -103,7 +103,7 @@ func (ctrl *WalletController) GetBalances(c *gin.Context) {
 
 // GET /transactions
 func (ctrl *WalletController) GetTransactionHistory(c *gin.Context) {
-	var cRequest GetTransactionHistoryRequest
+	var cRequest GetTransactionHistoryQuery
 	if err := c.ShouldBindQuery(&cRequest); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, err)
 		return
@@ -119,12 +119,12 @@ func (ctrl *WalletController) GetTransactionHistory(c *gin.Context) {
 
 	transactions, nextCursor, err := ctrl.WalletService.GetTransactionHistory(user.ID, txnType, cRequest.Cursor, sortOrder, cRequest.Limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve transactions"})
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}
 
 	// Return transactions with the next cursor for pagination
-	c.JSON(http.StatusOK, GetTransactionHistoryResponse{
+	utils.SuccessResponse(c, GetTransactionHistoryResponse{
 		Data:       transactions,
 		NextCursor: nextCursor,
 	})

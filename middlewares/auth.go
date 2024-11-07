@@ -8,11 +8,11 @@ import (
 	"github.com/wanliqun/go-wallet-app/utils"
 )
 
-func AuthMiddleware(userService *services.UserService) gin.HandlerFunc {
+func AuthMiddleware(userService services.IUserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token == "" {
-			utils.ErrorResponse(c, http.StatusUnauthorized, services.ErrUnauthorized)
+		token, err := utils.ExtractBearerToken(c)
+		if err != nil {
+			utils.ErrorResponse(c, http.StatusUnauthorized, err)
 			return
 		}
 

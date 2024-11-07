@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,22 +20,8 @@ import (
 
 var (
 	db            *gorm.DB
-	userGenerator fakeUserGenerator
+	userGenerator models.FakeUserGenerator
 )
-
-type fakeUserGenerator struct {
-	userCounter atomic.Uint64
-}
-
-func (generator *fakeUserGenerator) Generate() *models.User {
-	id := generator.userCounter.Add(1)
-
-	return &models.User{
-		Model: gorm.Model{ID: uint(id)},
-		Name:  fmt.Sprintf("testuser_%d", id),
-		Email: fmt.Sprintf("testuser_%d@example.com", id),
-	}
-}
 
 // Setup PostgreSQL container for tests
 func TestMain(m *testing.M) {

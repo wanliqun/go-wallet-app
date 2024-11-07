@@ -20,7 +20,17 @@ const (
 var (
 	ErrInvalidAmount       = errors.New("invalid amount")
 	ErrInsufficientBalance = errors.New("insufficient balance")
+
+	_ IWalletService = &WalletService{}
 )
+
+type IWalletService interface {
+	Deposit(userID uint, currency string, amount decimal.Decimal) error
+	Withdraw(userID uint, currency string, amount decimal.Decimal) error
+	Transfer(senderID, recipientID uint, currency string, amount decimal.Decimal, memo string) error
+	GetBalances(userID uint, currencies []string) ([]models.Vault, error)
+	GetTransactionHistory(userID uint, txnType models.TransactionType, cursor string, order SortOrder, limit int) ([]models.Transaction, string, error)
+}
 
 // WalletService represents the service for wallet-related operations
 type WalletService struct {

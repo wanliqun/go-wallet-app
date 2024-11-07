@@ -6,7 +6,7 @@ func SuccessResponse(c *gin.Context, data interface{}) {
 	c.JSON(200, gin.H{
 		"code":    0,
 		"message": "ok",
-		"result":  data,
+		"data":    data,
 	})
 }
 

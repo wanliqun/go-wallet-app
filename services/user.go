@@ -10,7 +10,13 @@ import (
 var (
 	ErrUnauthorized = errors.New("Unauthorized")
 	ErrUserNotFound = errors.New("user not found")
+
+	_ IUserService = &UserService{}
 )
+
+type IUserService interface {
+	GetUserByName(name string) (*models.User, bool, error)
+}
 
 // UserService represents the service for user-related operations
 type UserService struct {
