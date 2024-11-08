@@ -67,7 +67,7 @@ type GetBalancesQuery struct {
 type GetTransactionHistoryQuery struct {
 	Type   string `form:"type,omitempty" binding:"omitempty,oneof=deposit withdrawal transfer_out transfer_in"` // Filter by transaction type (e.g., "deposit", "withdrawal")
 	Cursor string `form:"cursor,omitempty"`                                                                     // Encoded cursor for keyset pagination
-	Limit  int    `form:"limit,omitempty"`                                                                      // Number of records to fetch
+	Limit  int    `form:"limit,omitempty" binding:"min=0,max=50"`                                               // Number of records to fetch
 	Order  string `form:"order,omitempty" binding:"omitempty,oneof=asc desc"`                                   // Sort order (e.g., "asc", "desc")
 }
 
