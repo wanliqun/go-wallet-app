@@ -43,6 +43,14 @@ func LoadConfig() {
 		log.Printf("Could not read config file: %v\n", err)
 	}
 
+	// Bind environment variables for specific config keys
+	viper.BindEnv("database.host")
+	viper.BindEnv("database.port")
+	viper.BindEnv("database.user")
+	viper.BindEnv("database.password")
+	viper.BindEnv("database.database")
+	viper.BindEnv("database.sslmode")
+
 	// Set up environment variable bindings (prefix with APP_)
 	viper.SetEnvPrefix("APP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

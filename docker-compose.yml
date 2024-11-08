@@ -1,0 +1,35 @@
+services:
+  # wallet-server
+  wallet-server:
+    build: .
+    image: wallet-server:latest
+    ports:
+      - 8080:8080
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - APP_DATABASE_HOST=postgres
+    container_name: wallet-server
+
+  # database
+  postgres:
+    image: postgres:13
+    ports:
+      - "5432"
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - POSTGRES_USER=postgres 
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    container_name: postgres13
+
+volumes:
+  postgres-data: {}
