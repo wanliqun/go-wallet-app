@@ -203,7 +203,7 @@ func (s *WalletService) GetTransactionHistory(
 
 	// Apply transaction type filter if provided
 	if txnType != "" {
-		query = query.Where("txn_type = ?", txnType)
+		query = query.Where("type = ?", txnType)
 	}
 
 	// Decode the cursor if provided for pagination

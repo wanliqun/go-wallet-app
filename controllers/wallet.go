@@ -125,7 +125,7 @@ func (ctrl *WalletController) GetTransactionHistory(c *gin.Context) {
 
 	// Return transactions with the next cursor for pagination
 	utils.SuccessResponse(c, GetTransactionHistoryResponse{
-		Data:       transactions,
-		NextCursor: nextCursor,
+		Transactions: transactions,
+		NextCursor:   nextCursor,
 	})
 }

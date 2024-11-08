@@ -73,6 +73,6 @@ type GetTransactionHistoryQuery struct {
 
 // GetTransactionHistoryResponse represents the response for paginated transaction history
 type GetTransactionHistoryResponse struct {
-	Data       []models.Transaction `json:"data"`        // Array of transaction objects
-	NextCursor string               `json:"next_cursor"` // Encoded cursor for next page
+	Transactions []models.Transaction `json:"transactions"` // Array of transaction objects
+	NextCursor   string               `json:"next_cursor"`  // Encoded cursor for next page
 }

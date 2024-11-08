@@ -290,6 +290,6 @@ func TestWalletController_GetTransactions(t *testing.T) {
 		}
 		json.Unmarshal(w.Body.Bytes(), &resp)
 		assert.Equal(t, expectedCursor, resp.Data.NextCursor)
-		assert.Equal(t, len(expectedTransactions), len(resp.Data.Data))
+		assert.Equal(t, len(expectedTransactions), len(resp.Data.Transactions))
 	})
 }
