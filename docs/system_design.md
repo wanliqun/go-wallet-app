@@ -10,7 +10,7 @@
     - name: User name for display or login
     - email: Email address for verification or notification
 - Vault: Stores funds in a specific currency for each user (replacing "wallet" for clarity):
-    - currency: Type of currency (e.g., USD, BTC)
+    - currency: Type of currency (e.g., USDT, BTC)
     - amount: Current balance in that currency
 - Transaction: Records every movement of funds:
     - type: Type of transaction (e.g., deposit, withdrawal, transfer)
@@ -44,7 +44,7 @@
 #### 1. Performance
 
 - Balance Retrieval: Checking vault balances is a frequent operation, especially if shown on the app’s landing page. Ideally, balance retrieval should occur within 200ms.
-- Transaction Retrieval: Retrieving recent transactions should be quick, with an aim for under 300ms latency.
+- Transaction Retrieval: Retrieving recent transactions should be quick, with an aim for under 500ms latency.
 
 #### 2. Availability
 
@@ -88,9 +88,9 @@
 | Column         | Data Type           | Constraints                                | Description                                                     |
 |----------------|---------------------|--------------------------------------------|-----------------------------------------------------------------|
 | id             | `UNSIGNED INT(4)`   | `PRIMARY KEY`, `AUTO_INCREMENT`            | Unique identifier for each transaction                          |
-| user_id        | `UNSIGNED INT(4)`   | `NOT NULL`, `INDEX (idx_user_id)`          | Foreign key referencing `User.id`; primary user in the txn      |
+| user_id        | `UNSIGNED INT(4)`   | `NOT NULL`                                 | Foreign key referencing `User.id`; primary user in the txn      |
 | counterpart_id | `UNSIGNED INT(4)`   | `DEFAULT NULL`                             | Foreign key referencing `User.id`; other user in a transfer     |
-| type           | `ENUM('deposit', 'withdraw', 'transfer_from', 'transfer_to')` | `NOT NULL` | Type of transaction (deposit, withdraw, transfer from/to)       |
+| type           | `VARCHAR(16)`      | `NOT NULL` | Type of transaction (deposit, withdraw, transfer in/out)       |
 | amount         | `NUMERIC(36, 18)`   | `NOT NULL`                                 | Amount of currency in the transaction                           |
 | currency       | `VARCHAR(32)`       | `NOT NULL`                                 | Currency type (matches `Vault.currency`)                        |
 | memo           | `VARCHAR(256)`      | `NULL`                                     | Optional note for transaction                                   |
@@ -100,9 +100,12 @@
 
 ### Notes
 
-- **Amount Precision**: The `NUMERIC(36, 18)` type supports large values with up to 18 decimal places, suitable for cryptocurrency balances.
-- **Transfer Records**: Two entries are created per transfer transaction—`transfer_from` for the sender and `transfer_to` for the recipient—allowing simple queries for all user-related transactions.
-- **User ID Index** indexes improve query performance for transactions involving specific users.
+- **Amount Precision**: The `NUMERIC(64, 0)` type supports extremely large values, suitable for cryptocurrency balances with different precisions.
+- **Transfer Records**: Two entries are created per transfer transaction—`transfer_out` for the sender and `transfer_in` for the recipient—allowing simple queries for all user-related transactions.
+- **Keyset Pagination** The `(user_id, timestamp, id)` composite index is specifically designed to support efficient transaction history queries involving specific users, especially for keyset pagination. The index is structured to efficiently support paginated queries by user:
+  - **user_id** as the first column, allowing the index to quickly filter all transactions related to a specific user.
+  - **timestamp** as the second column, ensuring efficient ordering by time, which is critical for retrieving the most recent transactions.
+  - **id** is the third column, providing uniqueness and ensuring consistent sorting when multiple transactions occur at the same timestamp. This helps keyset pagination avoid inconsistent results due to ties in timestamp values.
 
 # API Design
 
@@ -110,7 +113,7 @@
 
 - **Authentication**: All API methods require authorization. A Bearer token must be provided in the `Authorization` header of the request. For simplification, we'll temporarily use the username as the Bearer token to identify the acting user.
 
-  **Note**: Using usernames as Bearer tokens poses security risks. We would implement a more secure authentication mechanism, such as OAuth2 or JWT (JSON Web Token) in real production environment.
+  **Note**: Using usernames as Bearer tokens poses security risks. We would implement a more secure authentication mechanism, such as OAuth2 or JWT (JSON Web Token) for real production environment.
 
 - **Unified API Response Format**:
 
@@ -124,7 +127,7 @@
 
   - `code`: `0` indicates success; non-zero values indicate a specific error.
   - `message`: "ok" for success; error message if an error occurs.
-  - `result`: The data object returned upon success.
+  - `result`: The result object returned upon success.
 
 ## API Endpoints
 
@@ -137,7 +140,7 @@
      | Parameter | Type                  | Required | Description                             |
      |-----------|-----------------------|----------|-----------------------------------------|
      | currency  | `string`              | Yes      | Currency type (e.g., USDT, BTC)         |
-     | amount    | `string` or `decimal` | Yes      | Deposit amount (supports large numbers) |
+     | amount    | `string` or `decimal` | Yes      | Deposit amount                          |
 
    - **Response**:
 
@@ -152,7 +155,7 @@
      | Parameter | Type                  | Required | Description                               |
      |-----------|-----------------------|----------|-------------------------------------------|
      | currency  | `string`              | Yes      | Currency type                             |
-     | amount    | `string` or `decimal` | Yes      | Withdrawal amount (supports large numbers)|
+     | amount    | `string` or `decimal` | Yes      | Withdrawal amount                         |
 
    - **Response**:
 
@@ -168,7 +171,7 @@
      |------------|-----------------------|----------|---------------------------------------------|
      | recipient  | `string`              | Yes      | Recipient's username                        |
      | currency   | `string`              | Yes      | Currency type                               |
-     | amount     | `string` or `decimal` | Yes      | Amount to transfer (supports large numbers) |
+     | amount     | `string`              | Yes      | Amount to transfer                          |
      | memo       | `string`              | No       | Transfer notes or description               |
 
    - **Response**:
@@ -178,15 +181,12 @@
 4. **Get Balance**
 
    - **Method**: `GET /balances`
-   - **Description**: Retrieve all vault balances for the user.
+   - **Description**: Retrieve balances for the specified currencies for the user. Limits the currencies list to a maximum of 30 items.
    - **Request Parameters**:
 
      | Parameter | Type  | Required | Description                                   |
      |-----------|-------|----------|-----------------------------------------------|
-     | offset    | `int` | No       | Pagination starting point (default `0`)       |
-     | limit     | `int` | No       | Number of records per page (default `10`)     |
-
-     **Note**: Since the number of currency types is limited, offset pagination suffices for performance.
+     | currency  | `[]string` | YES       | List of currency codes to retrieve balances for (max 30)       |
 
    - **Response**:
 
@@ -198,15 +198,10 @@
              "balances": [
                  {
                      "currency": "USDT",
-                     "amount": "1000.00"
+                     "amount": "1000"
                  }
                  // More balance entries
-             ],
-             "pagination": {
-                 "offset": 0,
-                 "limit": 10,
-                 "total": 5
-             }
+             ]
          }
      }
      ```
@@ -214,17 +209,17 @@
 5. **Transaction History**
 
    - **Method**: `GET /transactions`
-   - **Description**: Retrieve the user's transaction history.
+   - **Description**: Retrieve the user's transaction history. 
    - **Request Parameters**:
 
      | Parameter | Type     | Required | Description                                                                    |
      |-----------|----------|----------|--------------------------------------------------------------------------------|
-     | cursor    | `int`    | No       | Last transaction ID from the previous page (for cursor pagination)             |
-     | limit     | `int`    | No       | Number of records per page (default `10`)                                      |
-     | type      | `string` | No       | Filter by transaction type (`deposit`, `withdraw`, `transfer_from`, `transfer_to`) |
+     | cursor    | `int`    | No       | Encoded cursor (timestamp + id) from the last transaction of the previous page |
+     | limit     | `int`    | No       | Number of records per page (default `10`, max `50`)                            |
+     | type      | `string` | No       | Filter by transaction type (`deposit`, `withdraw`, `transfer_out`, `transfer_in`) |
      | order     | `string` | No       | Sort order: `asc` or `desc` (default `desc`)                                   |
 
-     **Note**: To improve performance, transaction history uses **cursor pagination (keyset pagination)**.
+     **Note**: The cursor parameter is used for **keyset pagination**, which improves performance over traditional offset pagination by efficiently querying based on the last transaction’s position.
 
    - **Response**:
 
@@ -235,21 +230,27 @@
          "result": {
              "transactions": [
                  {
-                     "type": "transfer_from",
+                     "type": "transfer_out",
                      "counterparty": "alice",
                      "currency": "BTC",
-                     "amount": "0.5",
+                     "amount": "1",
                      "memo": "Payment for services",
                      "timestamp": "2023-11-04T12:34:56Z"
                  }
                  // More transaction records
              ],
-             "pagination": {
-                 "cursor": 10010,
-                 "limit": 10,
-                 "hasMore": true
-             }
+             "next_cursor": "MTczMTA2NjM2MzAwMF82MzQ="
          }
      }
      ```
 
+# Technical Decisions
+
+- Language: Chose Go for its performance and built-in concurrency support.
+- Follows MVC architecture for best engineering practice.
+- Web Framework: Used Gin for its minimalistic and high-performance HTTP request handling.
+- ORM: Utilized GORM for database interactions to simplify CRUD operations.
+- Database Transactions: Use retional database (Postgres) to implement transactions where atomicity is required (e.g., transfers).
+- Error Handling: Comprehensive error handling and meaningful HTTP responses.
+- Testing: Wrote unit tests for critical components to ensure reliability.
+- Dockerization: Added Docker support for easy setup and deployment.
